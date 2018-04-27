@@ -3,6 +3,7 @@ package models
 import javax.inject.{ Inject, Singleton }
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import java.time.LocalDateTime
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -17,8 +18,9 @@ class SubscriberRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
     def phone = column[String]("phone_number")
     def language = column[Option[String]]("language")
     def state = column[String]("state")
+    def createdAt = column[LocalDateTime]("createdAt")
 
-    def * = (id, phone, language, state) <> ((Subscriber.apply _).tupled, Subscriber.unapply)
+    def * = (id, phone, language, state, createdAt) <> ((Subscriber.apply _).tupled, Subscriber.unapply)
   }
 
   private val subscribers = TableQuery[SubscriberTable]
@@ -26,7 +28,7 @@ class SubscriberRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
   def create(phone: String): Future[Subscriber] = db.run {
     (subscribers.map(s => (s.phone, s.state))
       returning subscribers.map(_.id)
-      into ((row, id) => Subscriber(id, row._1, None, row._2))
+      into ((row, id) => Subscriber(id, row._1, None, row._2, LocalDateTime.now()))
     ) += (phone, "unsubscribed")
   }
 
@@ -46,7 +48,7 @@ class SubscriberRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(
       case None =>
         (subscribers.map(s => (s.phone, s.state))
           returning subscribers.map(_.id)
-          into ((row, id) => Subscriber(id, row._1, None, row._2))
+          into ((row, id) => Subscriber(id, row._1, None, row._2, LocalDateTime.now()))
           ) += (phone, "unsubscribed")
     }).transactionally
     db.run(action)
